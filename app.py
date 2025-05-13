@@ -57,17 +57,43 @@ class BinaryClassifier(nn.Module):
 # Streamlit app
 st.title("A Simple Neural Net Learning to Classify")
 
+# Default values for hyperparameters
+DEFAULT_VALUES = {
+    "num_samples": 200,
+    "train_test_split": 0.5,
+    "hidden_size": 10,
+    "learning_rate": 0.01,
+    "epochs": 50,
+    "batch_size": 16,
+    "noise_std": 0.2
+}
+
+# Initialize session state for hyperparameters if not exists
+if "initialized" not in st.session_state:
+    for key, value in DEFAULT_VALUES.items():
+        st.session_state[key] = value
+    st.session_state.initialized = True
+
 # Hyperparameters
 input_size = 2  # 2D input data
 st.sidebar.header("Hyperparameters")
-num_samples = st.sidebar.slider("Number of Samples", 100, 400, 200)
-train_test_split=st.sidebar.slider("Train-Test Split", 0.1, 0.9, 0.5)
-hidden_size = st.sidebar.slider("Hidden Size", 5, 20, 10)
+reset_button = st.sidebar.button("Reset")
+
+# Reset values when button is clicked
+if reset_button:
+    for key, value in DEFAULT_VALUES.items():
+        st.session_state[key] = value
+    st.rerun()  # Rerun the app to update all widgets
+
+# Sliders with session state
+num_samples = st.sidebar.slider("Number of Samples", 100, 400, key="num_samples")
+train_test_split = st.sidebar.slider("Train-Test Split", 0.1, 0.9, key="train_test_split")
+hidden_size = st.sidebar.slider("Hidden Size", 5, 20, key="hidden_size")
 output_size = 1  # Binary classification: probability of class 1
-learning_rate = st.sidebar.slider("Learning Rate", 0.001, 0.1, 0.01)
-epochs = st.sidebar.slider("Epochs", 1, 200, 50)
-batch_size = st.sidebar.slider("Batch Size", 1, 32, 16)
-noise_std = st.sidebar.slider("Noise Standard Deviation", 0.01, 1.0, 0.2)
+learning_rate = st.sidebar.slider("Learning Rate", 0.001, 0.1, key="learning_rate")
+epochs = st.sidebar.slider("Epochs", 1, 200, key="epochs")
+batch_size = st.sidebar.slider("Batch Size", 1, 32, key="batch_size")
+noise_std = st.sidebar.slider("Noise Standard Deviation", 0.01, 1.0, key="noise_std")
 
 # Set random seeds for reproducibility
 torch.manual_seed(42)
