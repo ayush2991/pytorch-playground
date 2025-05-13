@@ -176,7 +176,8 @@ optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 # Placeholders for the loss plot and data scatter plot during training
 loss_chart = st.empty()
 scatter_chart = st.empty()
-losses: List[float] = []
+train_losses: List[float] = []
+val_losses: List[float] = []
 epochs_list: List[int] = []
 
 if st.button("Start Training"):
@@ -185,8 +186,9 @@ if st.button("Start Training"):
     
     # Training loop
     for epoch in range(epochs):
-        running_loss = 0.0
+        # Training phase
         model.train()
+        running_train_loss = 0.0
         
         for i, data in enumerate(train_loader, 0):
             inputs, labels = data
@@ -197,27 +199,50 @@ if st.button("Start Training"):
             loss = criterion(outputs, labels)
             loss.backward()
             optimizer.step()
-            running_loss += loss.item()
+            running_train_loss += loss.item()
 
-        epoch_loss = running_loss / len(train_loader)
-        losses.append(epoch_loss)
+        epoch_train_loss = running_train_loss / len(train_loader)
+        train_losses.append(epoch_train_loss)
+        
+        # Validation phase
+        model.eval()
+        running_val_loss = 0.0
+        with torch.no_grad():
+            for data in test_loader:
+                inputs, labels = data
+                inputs, labels = inputs.to(device), labels.to(device)
+                outputs = model(inputs)
+                val_loss = criterion(outputs, labels)
+                running_val_loss += val_loss.item()
+        
+        epoch_val_loss = running_val_loss / len(test_loader)
+        val_losses.append(epoch_val_loss)
         epochs_list.append(epoch + 1)
         
         # Update progress bar
         progress_bar.progress((epoch + 1) / epochs)
 
         # Create the loss plot using streamlit
-        loss_df = pd.DataFrame({"Epoch": epochs_list, "Loss": losses})
+        loss_df = pd.DataFrame({
+            "Epoch": epochs_list + epochs_list,
+            "Loss": train_losses + val_losses,
+            "Type": ["Training"] * len(train_losses) + ["Validation"] * len(val_losses)
+        })
+        
         chart = (
             alt.Chart(loss_df)
             .mark_line()
-            .encode(x="Epoch", y="Loss", tooltip=["Epoch", "Loss"])
-            .properties(title="Training Loss per Epoch")
+            .encode(
+                x="Epoch",
+                y="Loss",
+                color="Type",
+                tooltip=["Epoch", "Loss", "Type"]
+            )
+            .properties(title="Training and Validation Loss per Epoch")
         )
         loss_chart.altair_chart(chart, use_container_width=True)
 
         # Create the scatter plot of the test data with predicted probabilities
-        model.eval()  # Set model to evaluation mode
         with torch.no_grad():
             predicted_probs = model(test_X.to(device)).cpu().numpy()
 
